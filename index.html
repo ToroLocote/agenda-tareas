@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agenda de Tareas — Matías</title>
+<style>
+  :root {
+    --bg: #f4f1ea;
+    --card: #fffdf8;
+    --ink: #2b2b28;
+    --muted: #8a857b;
+    --line: #e2ddd2;
+    --alta: #c0492f;
+    --media: #c9962b;
+    --baja: #5a8a6a;
+    --catedra: #3f6d8a;
+    --jabones: #8a5a3f;
+    --accent: #2b2b28;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    padding: 24px 16px 80px;
+    max-width: 900px;
+    margin: 0 auto;
+    line-height: 1.4;
+  }
+  header { margin-bottom: 20px; }
+  h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.5px; }
+  .sub { color: var(--muted); font-size: 0.9rem; margin-top: 2px; }
+
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin: 18px 0; align-items: center;
+  }
+  .controls input, .controls select {
+    padding: 8px 10px; border: 1px solid var(--line);
+    border-radius: 8px; background: var(--card); font-size: 0.9rem; color: var(--ink);
+  }
+  .controls input[type="text"] { flex: 1; min-width: 160px; }
+  button {
+    cursor: pointer; border: none; border-radius: 8px;
+    padding: 9px 14px; font-size: 0.9rem; font-weight: 600;
+  }
+  .add-btn { background: var(--accent); color: #fff; }
+  .add-btn:hover { opacity: 0.9; }
+
+  .stats {
+    display: flex; gap: 16px; font-size: 0.85rem; color: var(--muted);
+    margin-bottom: 14px; flex-wrap: wrap;
+  }
+  .stats b { color: var(--ink); }
+
+  .task {
+    background: var(--card); border: 1px solid var(--line);
+    border-left: 5px solid var(--line);
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 10px;
+    display: flex; align-items: flex-start; gap: 12px;
+    transition: opacity 0.2s;
+  }
+  .task.p-alta { border-left-color: var(--alta); }
+  .task.p-media { border-left-color: var(--media); }
+  .task.p-baja { border-left-color: var(--baja); }
+  .task.done { opacity: 0.5; }
+  .task.done .title { text-decoration: line-through; }
+
+  .task input[type="checkbox"] { width: 20px; height: 20px; margin-top: 2px; cursor: pointer; flex-shrink: 0; }
+  .task-body { flex: 1; min-width: 0; }
+  .title {
+    font-weight: 600; font-size: 1rem; border: none; background: transparent;
+    width: 100%; color: var(--ink); padding: 2px 0;
+  }
+  .title:focus { outline: none; border-bottom: 1px dashed var(--muted); }
+  .meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; align-items: center; }
+  .tag {
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.5px; padding: 3px 8px; border-radius: 20px; color: #fff;
+  }
+  .tag.catedra { background: var(--catedra); }
+  .tag.jabones { background: var(--jabones); }
+  .tag.otro { background: var(--muted); }
+  .pri-pill {
+    font-size: 0.72rem; font-weight: 700; padding: 3px 8px;
+    border-radius: 20px; border: 1px solid var(--line);
+  }
+  .pri-pill.alta { color: var(--alta); border-color: var(--alta); }
+  .pri-pill.media { color: var(--media); border-color: var(--media); }
+  .pri-pill.baja { color: var(--baja); border-color: var(--baja); }
+  .meta select {
+    font-size: 0.75rem; padding: 2px 4px; border: 1px solid var(--line);
+    border-radius: 6px; background: var(--bg);
+  }
+  .del { background: transparent; color: var(--muted); padding: 2px 6px; font-size: 1.1rem; margin-left: auto; }
+  .del:hover { color: var(--alta); }
+
+  .empty { text-align: center; color: var(--muted); padding: 40px 0; font-style: italic; }
+  .footer-actions { display: flex; gap: 8px; margin-top: 16px; }
+  .footer-actions button { background: var(--card); border: 1px solid var(--line); color: var(--muted); }
+  h2.group { font-size: 0.9rem; color: var(--muted); margin: 22px 0 8px; text-transform: uppercase; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Agenda de Tareas</h1>
+  <div class="sub">Revisión diaria · 8:30 a. m. — Organiza por prioridad</div>
+</header>
+
+<div class="controls">
+  <input type="text" id="newTitle" placeholder="Nueva tarea...">
+  <select id="newCat">
+    <option value="catedra">Cátedra</option>
+    <option value="jabones">Jabones</option>
+    <option value="otro">Otro</option>
+  </select>
+  <select id="newPri">
+    <option value="alta">Alta</option>
+    <option value="media" selected>Media</option>
+    <option value="baja">Baja</option>
+  </select>
+  <button class="add-btn" onclick="addTask()">+ Agregar</button>
+</div>
+
+<div class="controls">
+  <select id="filterCat" onchange="render()">
+    <option value="all">Todas las áreas</option>
+    <option value="catedra">Cátedra</option>
+    <option value="jabones">Jabones</option>
+    <option value="otro">Otro</option>
+  </select>
+  <select id="sortBy" onchange="render()">
+    <option value="pri">Ordenar por prioridad</option>
+    <option value="cat">Ordenar por área</option>
+  </select>
+  <label style="font-size:0.85rem;color:var(--muted);display:flex;align-items:center;gap:6px;">
+    <input type="checkbox" id="hideDone" onchange="render()"> Ocultar completadas
+  </label>
+</div>
+
+<div class="stats" id="stats"></div>
+<div id="list"></div>
+
+<div class="footer-actions">
+  <button onclick="clearDone()">Borrar completadas</button>
+  <button onclick="exportData()">Exportar (JSON)</button>
+</div>
+
+<script>
+let tasks = [];
+
+function load() {
+  try {
+    const r = localStorage.getItem('tasks');
+    tasks = r ? JSON.parse(r) : seed();
+  } catch { tasks = seed(); }
+  render();
+}
+function seed() {
+  const c = (title, pri) => ({ id: id(), title, cat: 'catedra', pri, done: false });
+  return [
+    c('Regresión lineal – taller (buscar dataset para deber)', 'alta'),
+    c('Regresión logística – taller', 'alta'),
+    c('Árboles de decisión – taller', 'media'),
+    c('Random Forest – taller', 'media'),
+    c('SVM – taller (buscar dataset para taller)', 'media'),
+    c('Buscar dataset único para deber de los 4 algoritmos de clasificación', 'media'),
+    c('K-Means – taller', 'media'),
+    c('DBSCAN – taller', 'media'),
+    c('Clustering jerárquico – taller', 'media'),
+    c('Buscar dataset de segmentación de clientes (deber de clustering)', 'media'),
+    c('Guiar a estudiantes: crear portafolio en GitHub', 'baja'),
+    c('Guiar cursos en Kaggle', 'baja'),
+    c('Guiar cursos en Datacamp', 'baja'),
+    c('Experimento feedback: dividir estudiantes en 2 grupos (IA vs personalizado) y medir', 'alta'),
+    c('Ver conector/API para feedback (o hacerlo con Claude Code)', 'alta'),
+    c('Calificar talleres (aplicar penalización por retraso según sílabo)', 'alta'),
+    c('Generar rúbricas para deberes con Edison (aplica retrasos)', 'media'),
+  ];
+}
+function id() { return Date.now() + '' + Math.floor(Math.random()*1000); }
+
+function save() {
+  try { localStorage.setItem('tasks', JSON.stringify(tasks)); } catch {}
+}
+
+function addTask() {
+  const t = document.getElementById('newTitle');
+  if (!t.value.trim()) return;
+  tasks.push({ id: id(), title: t.value.trim(), cat: document.getElementById('newCat').value, pri: document.getElementById('newPri').value, done: false });
+  t.value = '';
+  save(); render();
+}
+document.getElementById('newTitle').addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
+
+function toggle(i) { const t = tasks.find(x=>x.id===i); t.done = !t.done; save(); render(); }
+function editTitle(i, v) { tasks.find(x=>x.id===i).title = v; save(); }
+function setPri(i, v) { tasks.find(x=>x.id===i).pri = v; save(); render(); }
+function setCat(i, v) { tasks.find(x=>x.id===i).cat = v; save(); render(); }
+function del(i) { tasks = tasks.filter(x=>x.id!==i); save(); render(); }
+function clearDone() { tasks = tasks.filter(x=>!x.done); save(); render(); }
+function exportData() {
+  const blob = new Blob([JSON.stringify(tasks, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'tareas.json'; a.click();
+}
+
+const priOrder = { alta: 0, media: 1, baja: 2 };
+const catLabel = { catedra: 'Cátedra', jabones: 'Jabones', otro: 'Otro' };
+
+function render() {
+  const list = document.getElementById('list');
+  const fCat = document.getElementById('filterCat').value;
+  const sort = document.getElementById('sortBy').value;
+  const hide = document.getElementById('hideDone').checked;
+
+  let items = tasks.filter(t => (fCat==='all' || t.cat===fCat) && (!hide || !t.done));
+  items.sort((a,b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    if (sort === 'pri') return priOrder[a.pri]-priOrder[b.pri];
+    return a.cat.localeCompare(b.cat) || priOrder[a.pri]-priOrder[b.pri];
+  });
+
+  const pend = tasks.filter(t=>!t.done).length;
+  const alta = tasks.filter(t=>!t.done && t.pri==='alta').length;
+  document.getElementById('stats').innerHTML =
+    `<span><b>${pend}</b> pendientes</span><span><b>${alta}</b> de alta prioridad</span><span><b>${tasks.length-pend}</b> completadas</span>`;
+
+  if (!items.length) { list.innerHTML = '<div class="empty">No hay tareas. ¡Agrega una arriba!</div>'; return; }
+
+  list.innerHTML = items.map(t => `
+    <div class="task p-${t.pri} ${t.done?'done':''}">
+      <input type="checkbox" ${t.done?'checked':''} onchange="toggle('${t.id}')">
+      <div class="task-body">
+        <input class="title" value="${t.title.replace(/"/g,'&quot;')}" onchange="editTitle('${t.id}', this.value)">
+        <div class="meta">
+          <select onchange="setCat('${t.id}', this.value)">
+            <option value="catedra" ${t.cat==='catedra'?'selected':''}>Cátedra</option>
+            <option value="jabones" ${t.cat==='jabones'?'selected':''}>Jabones</option>
+            <option value="otro" ${t.cat==='otro'?'selected':''}>Otro</option>
+          </select>
+          <select onchange="setPri('${t.id}', this.value)">
+            <option value="alta" ${t.pri==='alta'?'selected':''}>Alta</option>
+            <option value="media" ${t.pri==='media'?'selected':''}>Media</option>
+            <option value="baja" ${t.pri==='baja'?'selected':''}>Baja</option>
+          </select>
+          <span class="pri-pill ${t.pri}">${t.pri}</span>
+          <button class="del" onclick="del('${t.id}')" title="Eliminar">×</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+load();
+</script>
+</body>
+</html>
